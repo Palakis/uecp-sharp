@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // l'ensemble d'attributs suivant. Changez les valeurs de ces attributs pour modifier les informations
 // associées à un assembly.
 [assembly: AssemblyTitle("uecp-sharp")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("UECP Client library")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("uecp-sharp")]
-[assembly: AssemblyCopyright("Copyright ©  2017")]
+[assembly: AssemblyCopyright("Copyright © 2017 Stéphane Lepin")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
