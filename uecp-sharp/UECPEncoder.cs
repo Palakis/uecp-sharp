@@ -113,8 +113,13 @@ namespace UECP
 
         private void BuildAndSendMessage(byte elementCode, byte[] messageElementData)
         {
+            BuildAndSendMessage(new MessageElement(elementCode, messageElementData));
+        }
+
+        private void BuildAndSendMessage(MessageElement messageElement)
+        {
             UECPFrame uecpFrame = new UECPFrame();
-            uecpFrame.MessageElements.Add(new MessageElement(elementCode, messageElementData));
+            uecpFrame.MessageElements.Add(messageElement);
 
             _endpoint.SendData(uecpFrame.GetBytes());
         }
