@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace UECP
 {
@@ -41,7 +40,7 @@ namespace UECP
 
         public void SetPI(UInt16 pi)
         {
-            BuildAndSendMessage(0x01, BitConverter.GetBytes(pi));
+            BuildAndSendMessage(MEC.RDS_PI, BitConverter.GetBytes(pi));
         }
 
         public void SetPS(string ps)
@@ -54,7 +53,7 @@ namespace UECP
 
             Buffer.BlockCopy(psBytes, 0, psData, 0, psBytes.Length);
 
-            BuildAndSendMessage(0x02, psData);
+            BuildAndSendMessage(MEC.RDS_PS, psData);
         }
 
         public void SetRadioText(string radioText)
@@ -69,7 +68,7 @@ namespace UECP
             rtData.Add(rtConfig);
             rtData.Concat(Encoding.ASCII.GetBytes(radioText));
 
-            BuildAndSendMessage(0x02, rtData.ToArray());
+            BuildAndSendMessage(MEC.RDS_RT, rtData.ToArray());
         }
 
         public void SetTraffic(bool TA, bool TP)
@@ -88,14 +87,14 @@ namespace UECP
             byte[] msgData = new byte[1];
             msgData[0] = (byte)data;
 
-            BuildAndSendMessage(0x03, msgData);
+            BuildAndSendMessage(MEC.RDS_TA_TP, msgData);
         }
 
         public void SetPTY(PTY pty)
         {
             byte[] ptyData = new byte[1];
             ptyData[0] = (byte)pty;
-            BuildAndSendMessage(0x07, ptyData);
+            BuildAndSendMessage(MEC.RDS_PTY, ptyData);
         }
 
         public void SetPTYN(string ptyn)
@@ -108,12 +107,12 @@ namespace UECP
 
             Buffer.BlockCopy(ptynBytes, 0, ptynData, 0, ptynBytes.Length);
 
-            BuildAndSendMessage(0x3E, ptynData);
+            BuildAndSendMessage(MEC.RDS_PTYN, ptynData);
         }
 
-        private void BuildAndSendMessage(byte elementCode, byte[] messageElementData)
+        private void BuildAndSendMessage(MEC elementCode, byte[] messageElementData)
         {
-            BuildAndSendMessage(new MessageElement(elementCode, messageElementData));
+            BuildAndSendMessage(new MessageElement((byte)elementCode, messageElementData));
         }
 
         private void BuildAndSendMessage(MessageElement messageElement)

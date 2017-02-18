@@ -1,10 +1,46 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿/*
+MIT License
+
+Copyright (c) 2017 Stéphane Lepin <stephane.lepin@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
 namespace UECP
 {
+    public enum MEC
+    {
+        RDS_PI = 0x01,
+        RDS_PS = 0x02,
+        RDS_PIN = 0x06,
+        RDS_DI_PTY = 0x04,
+        RDS_TA_TP = 0x03,
+        RDS_MS = 0x05,
+        RDS_PTY = 0x07,
+        RDS_PTYN = 0x3E,
+        RDS_RT = 0x0A,
+        RDS_AF = 0x13,
+        RDS_EON_AF = 0x14,
+        RDS_SLOW_LABELING = 0x1A,
+        RDS_LINKAGE_INFO = 0x2E
+    }
+
     public enum PTY
     {
         None = 0,
