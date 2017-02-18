@@ -46,6 +46,9 @@ namespace UECP
 
         public void SetPS(string ps)
         {
+            if (ps.Length > 8)
+                ps = ps.Substring(0, 8);
+
             byte[] psBytes = Encoding.ASCII.GetBytes(ps);
             byte[] psData = new byte[8];
 
@@ -54,9 +57,19 @@ namespace UECP
             BuildAndSendMessage(0x02, psData);
         }
 
-        public void SetRadioText(string rt)
+        public void SetRadioText(string radioText)
         {
-            BuildAndSendMessage(0x02, Encoding.ASCII.GetBytes(rt));
+            if(radioText.Length > 64)
+                radioText = radioText.Substring(0, 64);
+
+            // no A/B flag, infinite transmissions, buffer flushed when a new RT message arrives
+            byte rtConfig = 0x00; 
+
+            List<byte> rtData = new List<byte>();
+            rtData.Add(rtConfig);
+            rtData.Concat(Encoding.ASCII.GetBytes(radioText));
+
+            BuildAndSendMessage(0x02, rtData.ToArray());
         }
 
         public void SetTraffic(bool TA, bool TP)
@@ -78,10 +91,30 @@ namespace UECP
             BuildAndSendMessage(0x03, msgData);
         }
 
+        public void SetPTY(PTY pty)
+        {
+            byte[] ptyData = new byte[1];
+            ptyData[0] = (byte)pty;
+            BuildAndSendMessage(0x07, ptyData);
+        }
+
+        public void SetPTYN(string ptyn)
+        {
+            if (ptyn.Length > 8)
+                ptyn = ptyn.Substring(0, 8);
+
+            byte[] ptynBytes = Encoding.ASCII.GetBytes(ptyn);
+            byte[] ptynData = new byte[8];
+
+            Buffer.BlockCopy(ptynBytes, 0, ptynData, 0, ptynBytes.Length);
+
+            BuildAndSendMessage(0x3E, ptynData);
+        }
+
         private void BuildAndSendMessage(byte elementCode, byte[] messageElementData)
         {
             UECPFrame uecpFrame = new UECPFrame();
-            uecpFrame.AddMessageElement(new MessageElement(elementCode, messageElementData));
+            uecpFrame.MessageElements.Add(new MessageElement(elementCode, messageElementData));
 
             _endpoint.SendData(uecpFrame.GetBytes());
         }

@@ -33,72 +33,44 @@ namespace UECP
 {
     public class UECPFrame
     {
-        public static byte SequenceCounter = 0;
+        public static byte SequenceCounter = 1;
         public UInt16 SiteAddress;
         public UInt16 EncoderAddress;
-
-        private List<MessageElement> _msgElements;
+        public List<MessageElement> MessageElements;
 
         public UECPFrame()
         {
             SiteAddress = new UInt16();
             EncoderAddress = new UInt16();
 
-            _msgElements = new List<MessageElement>();
-        }
-
-        public void AddMessageElement(MessageElement ME)
-        {
-            _msgElements.Add(ME);
+            MessageElements = new List<MessageElement>();
         }
 
         public byte[] GetBytes()
         {
-            // Calculate the value of the ADD two-bytes field
-            if (SiteAddress > 1023)
-                throw new Exception("Invalid Site address");
-
-            if (EncoderAddress > 64)
-                throw new Exception("Invalid Encoder address");
-
-            int address = new UInt16();
-            address = (SiteAddress & 0x3FF) << 6;
-            address = address | (EncoderAddress & 0x3F);
-
-            byte[] addrBytes = BitConverter.GetBytes((UInt16)address);
-
             // Gather all message elements into a single byte array
-            int msgSize = 0;
-            List<byte[]> messages = new List<byte[]>();
-            foreach(MessageElement element in _msgElements)
+            List<byte> msgBytes = new List<byte>();
+            foreach(MessageElement element in MessageElements)
             {
-                byte[] data = element.GetBytes();
-                msgSize += data.Length;
-                messages.Add(data);
+                msgBytes.Concat(element.GetBytes());
             }
 
-            if(msgSize > 255)
+            if (msgBytes.Count > 255)
                 throw new Exception("Message too large");
 
-            byte[] msg = new byte[msgSize];
-            foreach(byte[] data in messages)
-            {
-                msg.Concat(data);
-            }
+            // Calculate the two-bytes ADD field
+            byte[] addrBytes = BitConverter.GetBytes(AddressField());
 
-            byte[] msgCRC = BitConverter.GetBytes(ComputeCCITTCRC(msg));
-
-            int msgOffset = (msg.Length - 1);
-            if (msgOffset < 1)
-                msgOffset = 1;
-
-            // Build the UECP frame
+            // Start building the UECP frame
             List<byte> frame = new List<byte>();
             frame.Add(addrBytes[0]); // ADD
             frame.Add(addrBytes[1]); // ADD
             frame.Add(SequenceCounter++); // SEQ
-            frame.Add((byte)msg.Length); // MEL = Message Element Length
-            frame.Concat(msg); // Message
+            frame.Add((byte)msgBytes.Count); // MEL = Message Element Length
+            frame.Concat(msgBytes); // Message
+
+            // Calculate CRC mid-way
+            byte[] msgCRC = BitConverter.GetBytes(CRCField(frame));
             frame.Add(msgCRC[0]); // CRC
             frame.Add(msgCRC[1]); // CRC
 
@@ -113,6 +85,62 @@ namespace UECP
 
             // And voilà
             return finalFrame.ToArray();
+        }
+
+        private ushort CRCField(List<byte> data)
+        {
+            // CRC16-CCITT : x^16 + x^12 + x^5 + 1
+            // Code based on http://sanity-free.org/133/crc_16_ccitt_in_csharp.html
+            // I have no idea what i'm doing
+
+            const ushort polynomial = 4129;
+
+            ushort[] table = new ushort[256];
+            for (int i = 0; i < table.Length; ++i)
+            {
+                ushort temp = 0;
+                ushort a = (ushort)(i << 8);
+
+                for (int j = 0; j < 8; ++j)
+                {
+                    if (((temp ^ a) & 0x8000) != 0)
+                    {
+                        temp = (ushort)((temp << 1) ^ polynomial);
+                    }
+                    else
+                    {
+                        temp <<= 1;
+                    }
+
+                    a <<= 1;
+                }
+
+                table[i] = temp;
+            }
+
+            ushort crc = 0;
+            for (int i = 0; i < data.Count; ++i)
+            {
+                crc = (ushort)((crc << 8) ^ table[((crc >> 8) ^ (0xFF & data[i]))]);
+            }
+
+            return crc;
+        }
+
+        private UInt16 AddressField()
+        {
+            if (SiteAddress > 1023)
+                throw new Exception("Invalid Site address");
+
+            if (EncoderAddress > 64)
+                throw new Exception("Invalid Encoder address");
+
+            // Calculate the value of the ADD two-bytes field
+            int address = 0;
+            address = (SiteAddress & 0x3FF) << 6;
+            address = address | (EncoderAddress & 0x3F);
+
+            return (UInt16)address;
         }
 
         private void ApplyByteStuffing(List<byte> data)
@@ -135,46 +163,6 @@ namespace UECP
                     data.Insert(i + 1, 0x02);
                 }
             }
-        }
-
-        private ushort ComputeCCITTCRC(byte[] data)
-        {
-            // CRC16-CCITT : x^16 + x^12 + x^5 + 1
-            // Code based on http://sanity-free.org/133/crc_16_ccitt_in_csharp.html
-            // I have no idea what i'm doing
-
-            const ushort polynomial = 4129;
-
-            ushort[] table = new ushort[256];
-            for(int i = 0; i < table.Length; ++i)
-            {
-                ushort temp = 0;
-                ushort a = (ushort)(i << 8);
-
-                for(int j = 0; j < 8; ++j)
-                {
-                    if(((temp ^ a) & 0x8000) != 0)
-                    {
-                        temp = (ushort)((temp << 1) ^ polynomial);
-                    }
-                    else
-                    {
-                        temp <<= 1;
-                    }
-
-                    a <<= 1;
-                }
-
-                table[i] = temp;
-            }
-
-            ushort crc = 0;
-            for(int i = 0; i < data.Length; ++i)
-            {
-                crc = (ushort)((crc << 8) ^ table[((crc >> 8) ^ (0xFF & data[i]))]);
-            }
-
-            return crc;
         }
     }
 
@@ -204,20 +192,16 @@ namespace UECP
         public byte[] GetBytes()
         {
             if(Data.Length > 254)
-            {
                 throw new Exception("Message Element Data too large");
-            }
 
-            int msgSize = 4 + Data.Length;
-            byte[] msgData = new byte[msgSize];
-
-            msgData[0] = ElementCode;
-            msgData[1] = DataSetNumber;
-            msgData[2] = ProgramServiceNumber;
-            msgData[3] = (byte)Data.Length;
+            List<byte> msgData = new List<byte>();
+            msgData.Add(ElementCode);
+            msgData.Add(DataSetNumber);
+            msgData.Add(ProgramServiceNumber);
+            msgData.Add((byte)Data.Length);
             msgData.Concat(Data);
 
-            return msgData;
+            return msgData.ToArray();
         }
     }
 }
