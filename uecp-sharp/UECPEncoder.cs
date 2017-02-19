@@ -66,7 +66,7 @@ namespace UECP
 
             List<byte> rtData = new List<byte>();
             rtData.Add(rtConfig);
-            rtData.Concat(Encoding.ASCII.GetBytes(radioText));
+            rtData.AddRange(Encoding.ASCII.GetBytes(radioText));
 
             BuildAndSendMessage(MEC.RDS_RT, rtData.ToArray());
         }

@@ -49,7 +49,7 @@ namespace UECP
             List<byte> msgBytes = new List<byte>();
             foreach(MessageElement element in MessageElements)
             {
-                msgBytes.Concat(element.GetBytes());
+                msgBytes.AddRange(element.GetBytes());
             }
 
             if (msgBytes.Count > 255)
@@ -64,12 +64,12 @@ namespace UECP
             frame.Add(addrBytes[1]); // ADD
             frame.Add(SequenceCounter++); // SEQ
             frame.Add((byte)msgBytes.Count); // MEL = Message Element Length
-            frame.Concat(msgBytes); // Message
+            frame.AddRange(msgBytes); // Message
 
             // Calculate CRC mid-way
             byte[] msgCRC = BitConverter.GetBytes(CRCField(frame));
-            frame.Add(msgCRC[0]); // CRC
             frame.Add(msgCRC[1]); // CRC
+            frame.Add(msgCRC[0]); // CRC
 
             // Apply stuffing
             ApplyByteStuffing(frame);
@@ -77,7 +77,7 @@ namespace UECP
             // Build the final frame
             List<byte> finalFrame = new List<byte>();
             finalFrame.Add(0xFE); // Start
-            finalFrame.Concat(frame);
+            finalFrame.AddRange(frame);
             finalFrame.Add(0xFF); // Stop
 
             // And voilà
@@ -87,41 +87,22 @@ namespace UECP
         private ushort CRCField(List<byte> data)
         {
             // CRC16-CCITT : x^16 + x^12 + x^5 + 1
-            // Code based on http://sanity-free.org/133/crc_16_ccitt_in_csharp.html
-            // I have no idea what i'm doing
+            // Code from UoC-Radio/rds-control on GitHub
+            // Link : https://github.com/UoC-Radio/rds-control/blob/master/uecp.c#L50-L65
+            // Because I have no idea what i'm doing
 
-            const ushort polynomial = 4129;
+            int crc = 0xFFFF;
 
-            ushort[] table = new ushort[256];
-            for (int i = 0; i < table.Length; ++i)
+            for(int i = 0; i < data.Count; i++)
             {
-                ushort temp = 0;
-                ushort a = (ushort)(i << 8);
-
-                for (int j = 0; j < 8; ++j)
-                {
-                    if (((temp ^ a) & 0x8000) != 0)
-                    {
-                        temp = (ushort)((temp << 1) ^ polynomial);
-                    }
-                    else
-                    {
-                        temp <<= 1;
-                    }
-
-                    a <<= 1;
-                }
-
-                table[i] = temp;
+                crc = (byte)(crc >> 8) | (crc << 8);
+                crc ^= data[i];
+                crc ^= (byte)(crc & 0xff) >> 4;
+                crc ^= (crc << 8) << 4;
+                crc ^= ((crc & 0xff) << 4) << 1;
             }
 
-            ushort crc = 0;
-            for (int i = 0; i < data.Count; ++i)
-            {
-                crc = (ushort)((crc << 8) ^ table[((crc >> 8) ^ (0xFF & data[i]))]);
-            }
-
-            return crc;
+            return (ushort)((crc ^= 0xFFFF) & 0xFFFF);
         }
 
         private UInt16 AddressField()
@@ -178,11 +159,9 @@ namespace UECP
             Data = new byte[0];
         }
 
-        public MessageElement(byte elementCode, byte[] data)
+        public MessageElement(byte elementCode, byte[] data) : this()
         {
             ElementCode = elementCode;
-            DataSetNumber = 0;
-            ProgramServiceNumber = 0;
             Data = data;
         }
 
@@ -196,7 +175,7 @@ namespace UECP
             msgData.Add(DataSetNumber);
             msgData.Add(ProgramServiceNumber);
             msgData.Add((byte)Data.Length);
-            msgData.Concat(Data);
+            msgData.AddRange(Data);
 
             return msgData.ToArray();
         }
