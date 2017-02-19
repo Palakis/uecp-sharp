@@ -146,7 +146,7 @@ namespace UECP
 
     public class MessageElement
     {
-        public byte ElementCode;
+        public MEC ElementCode;
         public byte DataSetNumber;
         public byte ProgramServiceNumber;
         public byte[] Data;
@@ -159,7 +159,7 @@ namespace UECP
             Data = new byte[0];
         }
 
-        public MessageElement(byte elementCode, byte[] data) : this()
+        public MessageElement(MEC elementCode, byte[] data) : this()
         {
             ElementCode = elementCode;
             Data = data;
@@ -171,10 +171,21 @@ namespace UECP
                 throw new Exception("Message Element Data too large");
 
             List<byte> msgData = new List<byte>();
-            msgData.Add(ElementCode);
-            msgData.Add(DataSetNumber);
-            msgData.Add(ProgramServiceNumber);
-            msgData.Add((byte)Data.Length);
+            msgData.Add((byte)ElementCode);
+
+            if (MECRules.HasDSNPSN.Contains(ElementCode))
+            {
+                msgData.Add(DataSetNumber);
+
+                if(!MECRules.ExcludePSN.Contains(ElementCode))
+                    msgData.Add(ProgramServiceNumber);
+            }
+
+            if (MECRules.HasMEL.Contains(ElementCode))
+            {
+                msgData.Add((byte)Data.Length);
+            }
+            
             msgData.AddRange(Data);
 
             return msgData.ToArray();

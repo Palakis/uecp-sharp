@@ -38,7 +38,74 @@ namespace UECP
         RDS_AF = 0x13,
         RDS_EON_AF = 0x14,
         RDS_SLOW_LABELING = 0x1A,
-        RDS_LINKAGE_INFO = 0x2E
+        RDS_LINKAGE_INFO = 0x2E,
+
+        ODA_CONFIG = 0x40,
+        ODA_IDENT = 0x41,
+        ODA_FREE_FORMAT = 0x42,
+        ODA_PRIORITY = 0x43,
+        ODA_BURST_MODE = 0x44,
+        ODA_SPIN_WHEEL = 0x45,
+        ODA_DATA = 0x46,
+        ODA_DATA_ACL = 0x47,
+
+        TDC = 0x26,
+        EWS = 0x2B,
+        IH = 0x25,
+        TMC = 0x30,
+        FREE_FORMAT = 0x24,
+
+        // Paging not implemented
+
+        RTC = 0x0D,
+        RTC_CORRECTION = 0x09,
+        CT_ON_OFF = 0x19,
+
+        RDS_ON_OFF = 0x1E,
+        RDS_PHASE = 0x22,
+        RDS_LEVEL = 0x00,
+
+        UECP_ACK = 0x18,
+        UECP_REQUEST = 0x17
+    }
+
+    public struct MECRules
+    {
+        public static readonly MEC[] HasMEL = new MEC[] {
+            MEC.RDS_RT,
+            MEC.RDS_AF,
+            MEC.RDS_EON_AF,
+            MEC.ODA_IDENT,
+            MEC.ODA_PRIORITY,
+            MEC.ODA_DATA,
+            MEC.TDC,
+            MEC.TMC,
+            MEC.UECP_REQUEST,
+        };
+
+        public static readonly MEC[] HasDSNPSN = new MEC[] {
+            MEC.RDS_PI,
+            MEC.RDS_PS,
+            MEC.RDS_PIN,
+            MEC.RDS_DI_PTY,
+            MEC.RDS_TA_TP,
+            MEC.RDS_MS,
+            MEC.RDS_PTY,
+            MEC.RDS_PTYN,
+            MEC.RDS_RT,
+            MEC.RDS_AF,
+            MEC.RDS_EON_AF,
+            MEC.RDS_SLOW_LABELING,
+            MEC.RDS_LINKAGE_INFO,
+            MEC.ODA_IDENT,
+        };
+
+        public static readonly MEC[] ExcludePSN = new MEC[]
+        {
+            MEC.RDS_SLOW_LABELING,
+            MEC.ODA_IDENT,
+
+        };
     }
 
     public enum PTY

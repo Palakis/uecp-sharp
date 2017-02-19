@@ -48,12 +48,11 @@ namespace UECP
             if (ps.Length > 8)
                 ps = ps.Substring(0, 8);
 
-            byte[] psBytes = Encoding.ASCII.GetBytes(ps);
-            byte[] psData = new byte[8];
+            List<byte> psBytes = new List<byte>();
+            psBytes.AddRange(Encoding.ASCII.GetBytes(ps));
+            FillBytes(psBytes, (byte)' ', 8);
 
-            Buffer.BlockCopy(psBytes, 0, psData, 0, psBytes.Length);
-
-            BuildAndSendMessage(MEC.RDS_PS, psData);
+            BuildAndSendMessage(MEC.RDS_PS, psBytes.ToArray());
         }
 
         public void SetRadioText(string radioText)
@@ -112,7 +111,7 @@ namespace UECP
 
         private void BuildAndSendMessage(MEC elementCode, byte[] messageElementData)
         {
-            BuildAndSendMessage(new MessageElement((byte)elementCode, messageElementData));
+            BuildAndSendMessage(new MessageElement(elementCode, messageElementData));
         }
 
         private void BuildAndSendMessage(MessageElement messageElement)
@@ -121,6 +120,18 @@ namespace UECP
             uecpFrame.MessageElements.Add(messageElement);
 
             _endpoint.SendData(uecpFrame.GetBytes());
+        }
+
+        private void FillBytes(List<byte> data, byte fillWith, int desiredLength)
+        {
+            int fillBytes = desiredLength - data.Count;
+            if (fillBytes > 0)
+            {
+                for (int i = 0; i < fillBytes; i++)
+                {
+                    data.Add(fillWith);
+                }
+            }
         }
     }
 }
