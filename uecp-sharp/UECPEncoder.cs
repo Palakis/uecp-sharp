@@ -101,12 +101,11 @@ namespace UECP
             if (ptyn.Length > 8)
                 ptyn = ptyn.Substring(0, 8);
 
-            byte[] ptynBytes = Encoding.ASCII.GetBytes(ptyn);
-            byte[] ptynData = new byte[8];
+            List<byte> ptynBytes = new List<byte>();
+            ptynBytes.AddRange(Encoding.ASCII.GetBytes(ptyn));
+            FillBytes(ptynBytes, (byte)' ', 8);
 
-            Buffer.BlockCopy(ptynBytes, 0, ptynData, 0, ptynBytes.Length);
-
-            BuildAndSendMessage(MEC.RDS_PTYN, ptynData);
+            BuildAndSendMessage(MEC.RDS_PTYN, ptynBytes.ToArray());
         }
 
         private void BuildAndSendMessage(MEC elementCode, byte[] messageElementData)
