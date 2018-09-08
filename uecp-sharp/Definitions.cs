@@ -65,6 +65,8 @@ namespace UECP
 		RDS_PHASE = 0x22,
 		RDS_LEVEL = 0x00,
 
+		DAB_DYNAMIC_LABEL = 0xAA,
+
 		UECP_ACK = 0x18,
 		UECP_REQUEST = 0x17
 	}
@@ -81,6 +83,7 @@ namespace UECP
 			MEC.TDC,
 			MEC.TMC,
 			MEC.UECP_REQUEST,
+			MEC.DAB_DYNAMIC_LABEL
 		};
 
 		public static readonly MEC[] HasDSNPSN = new MEC[] {
@@ -103,8 +106,7 @@ namespace UECP
 		public static readonly MEC[] ExcludePSN = new MEC[]
 		{
 			MEC.RDS_SLOW_LABELING,
-			MEC.ODA_IDENT,
-
+			MEC.ODA_IDENT
 		};
 	}
 

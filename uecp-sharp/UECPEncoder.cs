@@ -101,7 +101,7 @@ namespace UECP
 				ptyn = ptyn.Substring(0, 8);
 
 			List<byte> med = new List<byte>();
-			med.AddRange(Encoding.ASCII.GetBytes(ptyn));
+			med.AddRange(_textEncoding.GetBytes(ptyn));
 			FillBytes(med, (byte)' ', 8);
 
 			BuildAndSendMessage(MEC.RDS_PTYN, med.ToArray());
@@ -171,6 +171,18 @@ namespace UECP
 			med.AddRange(BitConverter.GetBytes(block4));
 
 			BuildAndSendMessage(MEC.ODA_FREE_FORMAT, med.ToArray());
+		}
+
+		public void SetDABDynamicLabel(string dynamicLabel)
+		{
+			if (dynamicLabel.Length > 128)
+				dynamicLabel = dynamicLabel.Substring(0, 128);
+
+			var med = new List<byte>();
+			med.Add(0x00);
+			med.AddRange(_textEncoding.GetBytes(dynamicLabel));
+
+			BuildAndSendMessage(MEC.DAB_DYNAMIC_LABEL, med.ToArray());
 		}
 
 		private byte getODAConfiguration(
