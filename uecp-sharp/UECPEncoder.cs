@@ -1,4 +1,4 @@
-﻿/*
+/*
 MIT License
 
 Copyright (c) 2017 Stéphane Lepin <stephane.lepin@gmail.com>
@@ -109,6 +109,13 @@ namespace UECP
 
             BuildAndSendMessage(MEC.RDS_PTYN, ptynBytes.ToArray());
         }
+
+		public void SetMusicSpeech(bool isMusic)
+		{
+			List<byte> medBytes = new List<byte>();
+			medBytes.Add((byte)(isMusic ? 0x01 : 0x00));
+			BuildAndSendMessage(MEC.RDS_MS, medBytes.ToArray());
+		}
 
         private void BuildAndSendMessage(MEC elementCode, byte[] messageElementData)
         {
