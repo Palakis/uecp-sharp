@@ -147,8 +147,8 @@ namespace UECP
 	public enum ODABufferConfig
 	{
 		TransmitOnce,
-		AppendToCyclic,
-		Clear
+		AddToCyclic,
+		ClearCyclic
 	}
 
 	public enum ODATransmitMode
@@ -156,5 +156,11 @@ namespace UECP
 		Normal,
 		Burst,
 		SpinningWheel
+	}
+
+	public enum ODAConfigKind
+	{
+		FreeFormat,
+		ShortMessage
 	}
 }

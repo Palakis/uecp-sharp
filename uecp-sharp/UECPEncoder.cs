@@ -113,28 +113,53 @@ namespace UECP
 			BuildAndSendMessage(MEC.RDS_MS, med);
 		}
 
-		public void SendODA(
-			ushort aid, byte[] data,
+		public void SendODAShortMessage(
+			ushort aid, ushort message,
+			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce
+		)
+		{
+			var med = new List<byte>();
+			med.AddRange(BitConverter.GetBytes(aid));
+			med.Add(
+				getODAConfiguration(ODAConfigKind.ShortMessage, odaBufConfig)
+			);
+			med.AddRange(BitConverter.GetBytes(message));
+
+			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
+		}
+
+		public void SetODAFreeFormat(
+			ushort aid, byte block2, ushort block3, ushort block4,
 			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce,
 			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
 			ushort priority = 0
+		){
+			// ODA block 2 is 5 bits only
+			block2 &= 0x1F;
+
+			var med = new List<byte>();
+			med.AddRange(BitConverter.GetBytes(aid));
+			med.Add(
+				getODAConfiguration(ODAConfigKind.FreeFormat, odaBufConfig)
+			);
+			med.Add(block2);
+			med.AddRange(BitConverter.GetBytes(block3));
+			med.AddRange(BitConverter.GetBytes(block4));
+
+			BuildAndSendMessage(MEC.ODA_FREE_FORMAT, med.ToArray());
+		}
+
+		private byte getODAConfiguration(
+			ODAConfigKind kind,
+			ODABufferConfig odaBufConfig,
+			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
+			ushort priority = 0
 		) {
-			if (data.Length != 2 || data.Length != 3 || data.Length != 5)
-				throw new ArgumentException();
-
-			if (data.Length >= 3)
-			{
-				// ODA block 2 is 5 bits only
-				data[2] &= 0x1F;
-			}
-
 			if (priority > 2)
 				priority = 2;
 
-			int shortMessage = (data.Length == 2 ? 0b1 : 0b0);
-
-			int transmitMode = 0b00; // TODO
-			switch(odaTransmitMode)
+			int transmitMode = 0b00;
+			switch (odaTransmitMode)
 			{
 				case ODATransmitMode.Normal:
 				default:
@@ -151,64 +176,36 @@ namespace UECP
 			}
 
 			int bufferConfig = 0b00;
-			switch(odaBufConfig)
+			switch (odaBufConfig)
 			{
 				case ODABufferConfig.TransmitOnce:
 				default:
 					bufferConfig = 0b00;
 					break;
 
-				case ODABufferConfig.AppendToCyclic:
+				case ODABufferConfig.AddToCyclic:
 					bufferConfig = 0b10;
 					break;
 
-				case ODABufferConfig.Clear:
+				case ODABufferConfig.ClearCyclic:
 					bufferConfig = 0b11;
 					break;
 			}
 
 			byte config = 0x00;
-			// bit 7 is 0
-			config |= (byte)((shortMessage & 0b1) << 6); // bit 6
-			if (data.Length > 2)
+			// bit 7 is always set to 0
+			if (kind == ODAConfigKind.ShortMessage)
+			{
+				config |= (0b1 << 6); // bit 6 set to 1
+			}
+			if (kind == ODAConfigKind.FreeFormat)
 			{
 				config |= (byte)((priority & 0b11) << 4); // bits 4 and 5
 				config |= (byte)((transmitMode & 0b11) << 2); // bits 2 and 3
 			}
 			config |= (byte)(bufferConfig & 0b11); // bits 0 and 1
 
-			var med = new List<byte>();
-			med.AddRange(BitConverter.GetBytes(aid));
-			med.Add(config);
-			med.AddRange(data);
-			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
-		}
-
-		public void SetShortODA(
-			ushort aid, ushort message,
-			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce,
-			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
-			ushort priority = 0
-		) {
-			var bytes = new List<byte>();
-			bytes.AddRange(BitConverter.GetBytes(message));
-			SendODA(aid, bytes.ToArray(), odaBufConfig, odaTransmitMode, priority);
-		}
-
-		public void SetODAData(
-			ushort aid, byte block2, ushort block3, ushort block4,
-			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce,
-			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
-			ushort priority = 0
-		){
-			// ODA block 2 is 5 bits only
-			block2 &= 0x1F;
-
-			var bytes = new List<byte>();
-			bytes.Add(block2);
-			bytes.AddRange(BitConverter.GetBytes(block3));
-			bytes.AddRange(BitConverter.GetBytes(block4));
-			SendODA(aid, bytes.ToArray(), odaBufConfig, odaTransmitMode, priority);
+			return config;
 		}
 
 		private void BuildAndSendMessage(MEC elementCode, byte[] messageElementData)
