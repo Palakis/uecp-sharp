@@ -1,4 +1,4 @@
-/*
+﻿/*
 MIT License
 
 Copyright (c) 2017 Stéphane Lepin <stephane.lepin@gmail.com>
@@ -29,86 +29,86 @@ using System.Text;
 
 namespace UECP
 {
-    public class UECPEncoder
-    {
+	public class UECPEncoder
+	{
 		protected Encoding _textEncoding;
-        protected Endpoint _endpoint;
+		protected Endpoint _endpoint;
 
-        public UECPEncoder(Endpoint ep)
-        {
+		public UECPEncoder(Endpoint ep)
+		{
 			_textEncoding = new EBULatinEncoding();
-            _endpoint = ep;
-        }
+			_endpoint = ep;
+		}
 
-        public void SetPI(UInt16 pi)
-        {
-            BuildAndSendMessage(MEC.RDS_PI, BitConverter.GetBytes(pi));
-        }
+		public void SetPI(UInt16 pi)
+		{
+			BuildAndSendMessage(MEC.RDS_PI, BitConverter.GetBytes(pi));
+		}
 
-        public void SetPS(string ps)
-        {
-            if (ps.Length > 8)
-                ps = ps.Substring(0, 8);
+		public void SetPS(string ps)
+		{
+			if (ps.Length > 8)
+				ps = ps.Substring(0, 8);
 
-            List<byte> psBytes = new List<byte>();
-            psBytes.AddRange(_textEncoding.GetBytes(ps));
-            FillBytes(psBytes, (byte)' ', 8); // the space char is the same in both ASCII and E.1 encoding
+			List<byte> psBytes = new List<byte>();
+			psBytes.AddRange(_textEncoding.GetBytes(ps));
+			FillBytes(psBytes, (byte)' ', 8); // the space char is the same in both ASCII and E.1 encoding
 
-            BuildAndSendMessage(MEC.RDS_PS, psBytes.ToArray());
-        }
+			BuildAndSendMessage(MEC.RDS_PS, psBytes.ToArray());
+		}
 
-        public void SetRadioText(string radioText)
-        {
-            if(radioText.Length > 64)
-                radioText = radioText.Substring(0, 64);
+		public void SetRadioText(string radioText)
+		{
+			if(radioText.Length > 64)
+				radioText = radioText.Substring(0, 64);
 
-            // no A/B flag, infinite transmissions, buffer flushed when a new RT message arrives
-            byte rtConfig = 0x00; 
+			// no A/B flag, infinite transmissions, buffer flushed when a new RT message arrives
+			byte rtConfig = 0x00; 
 
-            List<byte> rtData = new List<byte>();
-            rtData.Add(rtConfig);
-            rtData.AddRange(_textEncoding.GetBytes(radioText));
+			List<byte> rtData = new List<byte>();
+			rtData.Add(rtConfig);
+			rtData.AddRange(_textEncoding.GetBytes(radioText));
 
-            BuildAndSendMessage(MEC.RDS_RT, rtData.ToArray());
-        }
+			BuildAndSendMessage(MEC.RDS_RT, rtData.ToArray());
+		}
 
-        public void SetTraffic(bool TA, bool TP)
-        {
-            byte taFlag = 0x01;
-            byte tpFlag = 0x02;
+		public void SetTraffic(bool TA, bool TP)
+		{
+			byte taFlag = 0x01;
+			byte tpFlag = 0x02;
 
-            int data = 0;
+			int data = 0;
 
-            if (TA)
-                data = data | taFlag;
+			if (TA)
+				data = data | taFlag;
 
-            if (TP)
-                data = data | tpFlag;
+			if (TP)
+				data = data | tpFlag;
 
-            byte[] msgData = new byte[1];
-            msgData[0] = (byte)data;
+			byte[] msgData = new byte[1];
+			msgData[0] = (byte)data;
 
-            BuildAndSendMessage(MEC.RDS_TA_TP, msgData);
-        }
+			BuildAndSendMessage(MEC.RDS_TA_TP, msgData);
+		}
 
-        public void SetPTY(PTY pty)
-        {
-            byte[] ptyData = new byte[1];
-            ptyData[0] = (byte)pty;
-            BuildAndSendMessage(MEC.RDS_PTY, ptyData);
-        }
+		public void SetPTY(PTY pty)
+		{
+			byte[] ptyData = new byte[1];
+			ptyData[0] = (byte)pty;
+			BuildAndSendMessage(MEC.RDS_PTY, ptyData);
+		}
 
-        public void SetPTYN(string ptyn)
-        {
-            if (ptyn.Length > 8)
-                ptyn = ptyn.Substring(0, 8);
+		public void SetPTYN(string ptyn)
+		{
+			if (ptyn.Length > 8)
+				ptyn = ptyn.Substring(0, 8);
 
-            List<byte> ptynBytes = new List<byte>();
-            ptynBytes.AddRange(Encoding.ASCII.GetBytes(ptyn));
-            FillBytes(ptynBytes, (byte)' ', 8);
+			List<byte> ptynBytes = new List<byte>();
+			ptynBytes.AddRange(Encoding.ASCII.GetBytes(ptyn));
+			FillBytes(ptynBytes, (byte)' ', 8);
 
-            BuildAndSendMessage(MEC.RDS_PTYN, ptynBytes.ToArray());
-        }
+			BuildAndSendMessage(MEC.RDS_PTYN, ptynBytes.ToArray());
+		}
 
 		public void SetMusicSpeech(bool isMusic)
 		{
@@ -117,29 +117,29 @@ namespace UECP
 			BuildAndSendMessage(MEC.RDS_MS, medBytes.ToArray());
 		}
 
-        private void BuildAndSendMessage(MEC elementCode, byte[] messageElementData)
-        {
-            BuildAndSendMessage(new MessageElement(elementCode, messageElementData));
-        }
+		private void BuildAndSendMessage(MEC elementCode, byte[] messageElementData)
+		{
+			BuildAndSendMessage(new MessageElement(elementCode, messageElementData));
+		}
 
-        private void BuildAndSendMessage(MessageElement messageElement)
-        {
-            UECPFrame uecpFrame = new UECPFrame();
-            uecpFrame.MessageElements.Add(messageElement);
+		private void BuildAndSendMessage(MessageElement messageElement)
+		{
+			UECPFrame uecpFrame = new UECPFrame();
+			uecpFrame.MessageElements.Add(messageElement);
 
-            _endpoint.SendData(uecpFrame.GetBytes());
-        }
+			_endpoint.SendData(uecpFrame.GetBytes());
+		}
 
-        private void FillBytes(List<byte> data, byte fillWith, int desiredLength)
-        {
-            int fillBytes = desiredLength - data.Count;
-            if (fillBytes > 0)
-            {
-                for (int i = 0; i < fillBytes; i++)
-                {
-                    data.Add(fillWith);
-                }
-            }
-        }
-    }
+		private void FillBytes(List<byte> data, byte fillWith, int desiredLength)
+		{
+			int fillBytes = desiredLength - data.Count;
+			if (fillBytes > 0)
+			{
+				for (int i = 0; i < fillBytes; i++)
+				{
+					data.Add(fillWith);
+				}
+			}
+		}
+	}
 }
