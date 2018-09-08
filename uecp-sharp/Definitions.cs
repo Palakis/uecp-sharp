@@ -160,7 +160,7 @@ namespace UECP
 
 	public enum ODAConfigKind
 	{
-		FreeFormat,
+		Data,
 		ShortMessage
 	}
 }

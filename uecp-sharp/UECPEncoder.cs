@@ -116,8 +116,7 @@ namespace UECP
 		public void SendODAShortMessage(
 			ushort aid, ushort message,
 			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce
-		)
-		{
+		) {
 			var med = new List<byte>();
 			med.AddRange(BitConverter.GetBytes(aid));
 			med.Add(
@@ -128,25 +127,29 @@ namespace UECP
 			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
 		}
 
-		public void SetODAFreeFormat(
+		public void SendODAData(
 			ushort aid, byte block2, ushort block3, ushort block4,
 			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce,
 			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
-			ushort priority = 0
-		){
+			ushort priority = 0,
+			bool isGroupB = false
+		) {
 			// ODA block 2 is 5 bits only
 			block2 &= 0x1F;
 
 			var med = new List<byte>();
 			med.AddRange(BitConverter.GetBytes(aid));
 			med.Add(
-				getODAConfiguration(ODAConfigKind.FreeFormat, odaBufConfig)
+				getODAConfiguration(ODAConfigKind.Data, odaBufConfig, odaTransmitMode, priority)
 			);
 			med.Add(block2);
-			med.AddRange(BitConverter.GetBytes(block3));
+			if (!isGroupB)
+			{
+				med.AddRange(BitConverter.GetBytes(block3));
+			}
 			med.AddRange(BitConverter.GetBytes(block4));
 
-			BuildAndSendMessage(MEC.ODA_FREE_FORMAT, med.ToArray());
+			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
 		}
 
 		private byte getODAConfiguration(
@@ -198,7 +201,7 @@ namespace UECP
 			{
 				config |= (0b1 << 6); // bit 6 set to 1
 			}
-			if (kind == ODAConfigKind.FreeFormat)
+			if (kind == ODAConfigKind.Data)
 			{
 				config |= (byte)((priority & 0b11) << 4); // bits 4 and 5
 				config |= (byte)((transmitMode & 0b11) << 2); // bits 2 and 3
