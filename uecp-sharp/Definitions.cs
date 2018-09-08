@@ -65,7 +65,8 @@ namespace UECP
 		RDS_PHASE = 0x22,
 		RDS_LEVEL = 0x00,
 
-		DAB_DYNAMIC_LABEL = 0xAA,
+		DAB_DL_MESSAGE = 0xAA,
+		DAB_DL_COMMAND = 0x48,
 
 		UECP_ACK = 0x18,
 		UECP_REQUEST = 0x17
@@ -83,7 +84,8 @@ namespace UECP
 			MEC.TDC,
 			MEC.TMC,
 			MEC.UECP_REQUEST,
-			MEC.DAB_DYNAMIC_LABEL
+			MEC.DAB_DL_MESSAGE,
+			MEC.DAB_DL_COMMAND
 		};
 
 		public static readonly MEC[] HasDSNPSN = new MEC[] {
@@ -164,5 +166,10 @@ namespace UECP
 	{
 		Data,
 		ShortMessage
+	}
+
+	public enum DLCommand
+	{
+
 	}
 }

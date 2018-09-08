@@ -173,16 +173,33 @@ namespace UECP
 			BuildAndSendMessage(MEC.ODA_FREE_FORMAT, med.ToArray());
 		}
 
-		public void SetDABDynamicLabel(string dynamicLabel)
+		public void SetDABDynamicLabelMessage(string dynamicLabel)
 		{
 			if (dynamicLabel.Length > 128)
 				dynamicLabel = dynamicLabel.Substring(0, 128);
 
 			var med = new List<byte>();
-			med.Add(0x00);
+			med.Add(0x00); // EBU Latin encoding
 			med.AddRange(_textEncoding.GetBytes(dynamicLabel));
 
-			BuildAndSendMessage(MEC.DAB_DYNAMIC_LABEL, med.ToArray());
+			BuildAndSendMessage(MEC.DAB_DL_MESSAGE, med.ToArray());
+		}
+
+		public void SendDABDynamicLabelCommand(byte command, byte[] commandBytes, bool temporary = false)
+		{
+			byte config = 0x00;
+			config |= (byte)((temporary ? 0b1 : 0b0) << 7);
+			config |= (byte)(command & 0xF);
+
+			int dataSize = Math.Min(128, commandBytes.Length);
+			byte[] data = new byte[dataSize];
+			Array.Copy(commandBytes, dataSize, data, 0, dataSize);
+
+			var med = new List<byte>();
+			med.Add(config);
+			med.AddRange(data);
+
+			BuildAndSendMessage(MEC.DAB_DL_COMMAND, med.ToArray());
 		}
 
 		private byte getODAConfiguration(
