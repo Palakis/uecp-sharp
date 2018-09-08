@@ -143,4 +143,24 @@ namespace UECP
 		AlarmTest = 30,
 		Alarm = 31
 	}
+
+	public enum ODABufferConfig
+	{
+		TransmitOnce,
+		AddToCyclic,
+		ClearCyclic
+	}
+
+	public enum ODATransmitMode
+	{
+		Normal,
+		Burst,
+		SpinningWheel
+	}
+
+	public enum ODAConfigKind
+	{
+		Data,
+		ShortMessage
+	}
 }

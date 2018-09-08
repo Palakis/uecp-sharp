@@ -40,7 +40,7 @@ namespace UECP
 			_endpoint = ep;
 		}
 
-		public void SetPI(UInt16 pi)
+		public void SetPI(ushort pi)
 		{
 			BuildAndSendMessage(MEC.RDS_PI, BitConverter.GetBytes(pi));
 		}
@@ -50,11 +50,11 @@ namespace UECP
 			if (ps.Length > 8)
 				ps = ps.Substring(0, 8);
 
-			List<byte> psBytes = new List<byte>();
-			psBytes.AddRange(_textEncoding.GetBytes(ps));
-			FillBytes(psBytes, (byte)' ', 8); // the space char is the same in both ASCII and E.1 encoding
+			List<byte> med = new List<byte>();
+			med.AddRange(_textEncoding.GetBytes(ps));
+			FillBytes(med, (byte)' ', 8); // the space char is the same in both ASCII and E.1 encoding
 
-			BuildAndSendMessage(MEC.RDS_PS, psBytes.ToArray());
+			BuildAndSendMessage(MEC.RDS_PS, med.ToArray());
 		}
 
 		public void SetRadioText(string radioText)
@@ -65,11 +65,11 @@ namespace UECP
 			// no A/B flag, infinite transmissions, buffer flushed when a new RT message arrives
 			byte rtConfig = 0x00; 
 
-			List<byte> rtData = new List<byte>();
-			rtData.Add(rtConfig);
-			rtData.AddRange(_textEncoding.GetBytes(radioText));
+			List<byte> med = new List<byte>();
+			med.Add(rtConfig);
+			med.AddRange(_textEncoding.GetBytes(radioText));
 
-			BuildAndSendMessage(MEC.RDS_RT, rtData.ToArray());
+			BuildAndSendMessage(MEC.RDS_RT, med.ToArray());
 		}
 
 		public void SetTraffic(bool TA, bool TP)
@@ -85,17 +85,14 @@ namespace UECP
 			if (TP)
 				data = data | tpFlag;
 
-			byte[] msgData = new byte[1];
-			msgData[0] = (byte)data;
-
-			BuildAndSendMessage(MEC.RDS_TA_TP, msgData);
+			var med = new byte[] { (byte)data };
+			BuildAndSendMessage(MEC.RDS_TA_TP, med);
 		}
 
 		public void SetPTY(PTY pty)
 		{
-			byte[] ptyData = new byte[1];
-			ptyData[0] = (byte)pty;
-			BuildAndSendMessage(MEC.RDS_PTY, ptyData);
+			var med = new byte[] { (byte)pty };
+			BuildAndSendMessage(MEC.RDS_PTY, med);
 		}
 
 		public void SetPTYN(string ptyn)
@@ -103,18 +100,136 @@ namespace UECP
 			if (ptyn.Length > 8)
 				ptyn = ptyn.Substring(0, 8);
 
-			List<byte> ptynBytes = new List<byte>();
-			ptynBytes.AddRange(Encoding.ASCII.GetBytes(ptyn));
-			FillBytes(ptynBytes, (byte)' ', 8);
+			List<byte> med = new List<byte>();
+			med.AddRange(Encoding.ASCII.GetBytes(ptyn));
+			FillBytes(med, (byte)' ', 8);
 
-			BuildAndSendMessage(MEC.RDS_PTYN, ptynBytes.ToArray());
+			BuildAndSendMessage(MEC.RDS_PTYN, med.ToArray());
 		}
 
 		public void SetMusicSpeech(bool isMusic)
 		{
-			List<byte> medBytes = new List<byte>();
-			medBytes.Add((byte)(isMusic ? 0x01 : 0x00));
-			BuildAndSendMessage(MEC.RDS_MS, medBytes.ToArray());
+			var med = new byte[] { (byte)(isMusic ? 0x01 : 0x00) };
+			BuildAndSendMessage(MEC.RDS_MS, med);
+		}
+
+		public void SendODAShortMessage(
+			ushort aid, ushort message,
+			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce
+		) {
+			var med = new List<byte>();
+			med.AddRange(BitConverter.GetBytes(aid));
+			med.Add(
+				getODAConfiguration(ODAConfigKind.ShortMessage, odaBufConfig)
+			);
+			med.AddRange(BitConverter.GetBytes(message));
+
+			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
+		}
+
+		public void SendODAData(
+			ushort aid, byte block2, ushort block3, ushort block4,
+			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce,
+			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
+			ushort priority = 0,
+			bool isGroupB = false
+		) {
+			// ODA block 2 is 5 bits only
+			block2 &= 0x1F;
+
+			var med = new List<byte>();
+			med.AddRange(BitConverter.GetBytes(aid));
+			med.Add(
+				getODAConfiguration(ODAConfigKind.Data, odaBufConfig, odaTransmitMode, priority)
+			);
+			med.Add(block2);
+			if (!isGroupB)
+			{
+				med.AddRange(BitConverter.GetBytes(block3));
+			}
+			med.AddRange(BitConverter.GetBytes(block4));
+
+			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
+		}
+
+		public void SendODAFreeFormatData(
+			byte appGroupType, byte block2, ushort block3, ushort block4,
+			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce,
+			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
+			ushort priority = 0
+		) {
+			// ODA block 2 is 5 bits only
+			block2 &= 0x1F;
+
+			var med = new List<byte>();
+			med.Add(appGroupType);
+			med.Add(
+				getODAConfiguration(ODAConfigKind.Data, odaBufConfig, odaTransmitMode, priority)
+			);
+			med.Add(block2);
+			med.AddRange(BitConverter.GetBytes(block3));
+			med.AddRange(BitConverter.GetBytes(block4));
+
+			BuildAndSendMessage(MEC.ODA_FREE_FORMAT, med.ToArray());
+		}
+
+		private byte getODAConfiguration(
+			ODAConfigKind kind,
+			ODABufferConfig odaBufConfig,
+			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
+			ushort priority = 0
+		) {
+			if (priority > 2)
+				priority = 2;
+
+			int transmitMode = 0b00;
+			switch (odaTransmitMode)
+			{
+				case ODATransmitMode.Normal:
+				default:
+					transmitMode = 0b00;
+					break;
+
+				case ODATransmitMode.Burst:
+					transmitMode = 0b01;
+					break;
+
+				case ODATransmitMode.SpinningWheel:
+					transmitMode = 0b10;
+					break;
+			}
+
+			int bufferConfig = 0b00;
+			switch (odaBufConfig)
+			{
+				case ODABufferConfig.TransmitOnce:
+				default:
+					bufferConfig = 0b00;
+					break;
+
+				case ODABufferConfig.AddToCyclic:
+					bufferConfig = 0b10;
+					break;
+
+				case ODABufferConfig.ClearCyclic:
+					bufferConfig = 0b11;
+					break;
+			}
+
+			byte config = 0x00;
+			// bit 7 is always set to 0
+			if (kind == ODAConfigKind.ShortMessage)
+			{
+				config |= (0b1 << 6); // bit 6 set to 1
+			}
+			if (kind == ODAConfigKind.Data)
+			{
+				config |= (byte)((priority & 0b11) << 4); // bits 4 and 5
+				config |= (byte)((transmitMode & 0b11) << 2); // bits 2 and 3
+			}
+			config |= (byte)(bufferConfig & 0b11); // bits 0 and 1
+
+			return config;
 		}
 
 		private void BuildAndSendMessage(MEC elementCode, byte[] messageElementData)
