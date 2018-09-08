@@ -152,6 +152,27 @@ namespace UECP
 			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
 		}
 
+		public void SendODAFreeFormatData(
+			byte appGroupType, byte block2, ushort block3, ushort block4,
+			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce,
+			ODATransmitMode odaTransmitMode = ODATransmitMode.Normal,
+			ushort priority = 0
+		) {
+			// ODA block 2 is 5 bits only
+			block2 &= 0x1F;
+
+			var med = new List<byte>();
+			med.Add(appGroupType);
+			med.Add(
+				getODAConfiguration(ODAConfigKind.Data, odaBufConfig, odaTransmitMode, priority)
+			);
+			med.Add(block2);
+			med.AddRange(BitConverter.GetBytes(block3));
+			med.AddRange(BitConverter.GetBytes(block4));
+
+			BuildAndSendMessage(MEC.ODA_FREE_FORMAT, med.ToArray());
+		}
+
 		private byte getODAConfiguration(
 			ODAConfigKind kind,
 			ODABufferConfig odaBufConfig,
