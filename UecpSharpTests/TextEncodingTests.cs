@@ -38,7 +38,7 @@ namespace UecpSharpTests
 
 		private void testEncoding(string sourceText, byte[] expectedBytes)
 		{
-			Encoding e1 = new RdsE1Encoding();
+			Encoding e1 = new EBULatinEncoding();
 			byte[] actualBytes = e1.GetBytes(sourceText);
 
 			Assert.AreEqual(actualBytes.Length, expectedBytes.Length);

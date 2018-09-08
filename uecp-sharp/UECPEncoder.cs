@@ -36,7 +36,7 @@ namespace UECP
 
         public UECPEncoder(Endpoint ep)
         {
-			_textEncoding = new RdsE1Encoding();
+			_textEncoding = new EBULatinEncoding();
             _endpoint = ep;
         }
 
