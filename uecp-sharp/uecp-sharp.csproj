@@ -40,7 +40,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CharMapEncoding.cs" />
     <Compile Include="Definitions.cs" />
+    <Compile Include="RdsE1Encoding.cs" />
     <Compile Include="UECPConnection.cs" />
     <Compile Include="UECPEncoder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
