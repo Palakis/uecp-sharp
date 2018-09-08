@@ -7,9 +7,10 @@ namespace UECP
 {
 	public class EBULatinEncoding : CharMapEncoding
 	{
-		public override string WebName => "EBULatin";
+		public override string WebName => "ebulatin";
+		public override string EncodingName => "EBU Latin";
 
-		public EBULatinEncoding() : base(99123)
+		public EBULatinEncoding() : base(65221)
 		{
 			var e1 = new Dictionary<char, byte>
 			{
