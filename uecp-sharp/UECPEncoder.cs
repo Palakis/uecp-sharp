@@ -31,10 +31,12 @@ namespace UECP
 {
     public class UECPEncoder
     {
-        Endpoint _endpoint;
+		protected Encoding _textEncoding;
+        protected Endpoint _endpoint;
 
         public UECPEncoder(Endpoint ep)
         {
+			_textEncoding = new RdsE1Encoding();
             _endpoint = ep;
         }
 
@@ -49,8 +51,8 @@ namespace UECP
                 ps = ps.Substring(0, 8);
 
             List<byte> psBytes = new List<byte>();
-            psBytes.AddRange(Encoding.ASCII.GetBytes(ps));
-            FillBytes(psBytes, (byte)' ', 8);
+            psBytes.AddRange(_textEncoding.GetBytes(ps));
+            FillBytes(psBytes, (byte)' ', 8); // the space char is the same in both ASCII and E.1 encoding
 
             BuildAndSendMessage(MEC.RDS_PS, psBytes.ToArray());
         }
@@ -65,7 +67,7 @@ namespace UECP
 
             List<byte> rtData = new List<byte>();
             rtData.Add(rtConfig);
-            rtData.AddRange(Encoding.ASCII.GetBytes(radioText));
+            rtData.AddRange(_textEncoding.GetBytes(radioText));
 
             BuildAndSendMessage(MEC.RDS_RT, rtData.ToArray());
         }
