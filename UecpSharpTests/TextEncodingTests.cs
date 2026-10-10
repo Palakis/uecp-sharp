@@ -36,6 +36,24 @@ namespace UecpSharpTests
 			testEncoding(text, expectedBytes);
 		}
 
+		[TestMethod]
+		public void E1EmptyTextTest()
+		{
+			string text = "";
+			byte[] expectedBytes = { };
+
+			testEncoding(text, expectedBytes);
+		}
+
+		[TestMethod]
+		public void E1EmptyBytesTest()
+		{
+			Encoding e1 = new EBULatinEncoding();
+			string actualText = e1.GetString(new byte[0]);
+
+			Assert.AreEqual("", actualText);
+		}
+
 		private void testEncoding(string sourceText, byte[] expectedBytes)
 		{
 			Encoding e1 = new EBULatinEncoding();
