@@ -30,15 +30,16 @@ namespace UECP
 {
 	public class UECPFrame
 	{
-		public static byte SequenceCounter = 1;
 		public UInt16 SiteAddress;
 		public UInt16 EncoderAddress;
+		public byte SequenceCounter;
 		public List<MessageElement> MessageElements;
 
 		public UECPFrame()
 		{
 			SiteAddress = new UInt16();
 			EncoderAddress = new UInt16();
+			SequenceCounter = 0; // Sequence counter not used
 
 			MessageElements = new List<MessageElement>();
 		}
@@ -53,23 +54,23 @@ namespace UECP
 			}
 
 			if (msgBytes.Count > 255)
-				throw new Exception("Message too large");
+				throw new InvalidOperationException("Message too large");
 
 			// Calculate the two-bytes ADD field
-			byte[] addrBytes = BitConverter.GetBytes(AddressField());
+			UInt16 address = AddressField();
 
 			// Start building the UECP frame
 			List<byte> frame = new List<byte>();
-			frame.Add(addrBytes[0]); // ADD
-			frame.Add(addrBytes[1]); // ADD
-			frame.Add(SequenceCounter++); // SEQ
+			frame.Add((byte)(address >> 8)); // ADD
+			frame.Add((byte)(address & 0xFF)); // ADD
+			frame.Add(SequenceCounter); // SEQ
 			frame.Add((byte)msgBytes.Count); // MEL = Message Element Length
 			frame.AddRange(msgBytes); // Message
 
 			// Calculate CRC mid-way
-			byte[] msgCRC = BitConverter.GetBytes(CRCField(frame));
-			frame.Add(msgCRC[1]); // CRC
-			frame.Add(msgCRC[0]); // CRC
+			ushort msgCRC = CRCField(frame);
+			frame.Add((byte)(msgCRC >> 8)); // CRC
+			frame.Add((byte)(msgCRC & 0xFF)); // CRC
 
 			// Apply stuffing
 			ApplyByteStuffing(frame);
@@ -108,10 +109,10 @@ namespace UECP
 		private UInt16 AddressField()
 		{
 			if (SiteAddress > 1023)
-				throw new Exception("Invalid Site address");
+				throw new InvalidOperationException("Invalid Site address");
 
-			if (EncoderAddress > 64)
-				throw new Exception("Invalid Encoder address");
+			if (EncoderAddress > 63)
+				throw new InvalidOperationException("Invalid Encoder address");
 
 			// Calculate the value of the ADD two-bytes field
 			int address = 0;
@@ -161,14 +162,20 @@ namespace UECP
 
 		public MessageElement(MEC elementCode, byte[] data) : this()
 		{
+			if (data == null)
+				throw new ArgumentNullException(nameof(data));
+
 			ElementCode = elementCode;
 			Data = data;
 		}
 
 		public byte[] GetBytes()
 		{
+			if (Data == null)
+				throw new InvalidOperationException("Message Element Data missing");
+
 			if(Data.Length > 254)
-				throw new Exception("Message Element Data too large");
+				throw new InvalidOperationException("Message Element Data too large");
 
 			List<byte> msgData = new List<byte>();
 			msgData.Add((byte)ElementCode);

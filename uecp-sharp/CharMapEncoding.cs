@@ -69,10 +69,10 @@ namespace UECP
 			if (charIndex < 0 || charCount < 0 || byteIndex < 0)
 				throw new ArgumentOutOfRangeException();
 
-			if ((charIndex + charCount) > chars.Length || charCount > chars.Length || byteIndex > bytes.Length)
+			if (charIndex > chars.Length - charCount || byteIndex > bytes.Length)
 				throw new ArgumentOutOfRangeException();
 
-			if (bytes.Length < chars.Length)
+			if (bytes.Length - byteIndex < charCount)
 				throw new ArgumentException();
 
 			int i;
@@ -112,10 +112,10 @@ namespace UECP
 			if (byteIndex < 0 || byteCount < 0 || charIndex < 0)
 				throw new ArgumentOutOfRangeException();
 
-			if ((byteIndex + byteCount) > chars.Length || byteCount > chars.Length || charIndex > chars.Length)
+			if (byteIndex > bytes.Length - byteCount || charIndex > chars.Length)
 				throw new ArgumentOutOfRangeException();
 
-			if (chars.Length < bytes.Length)
+			if (chars.Length - charIndex < byteCount)
 				throw new ArgumentException();
 
 			int i;

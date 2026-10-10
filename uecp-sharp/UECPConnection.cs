@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+using System;
 using System.Net;
 using System.Net.Sockets;
 
@@ -32,19 +33,40 @@ namespace UECP
 		void SendData(byte[] data);
 	}
 
-	public class UDPSimplexEndpoint : Endpoint
+	public class UDPSimplexEndpoint : Endpoint, IDisposable
 	{
 		private UdpClient _udpClient;
 
 		public UDPSimplexEndpoint(string encoderAddress, int encoderPort)
 		{
-			_udpClient = new UdpClient();
-			_udpClient.Connect(IPAddress.Parse(encoderAddress), encoderPort);
+			IPAddress address = IPAddress.Parse(encoderAddress);
+
+			// The socket has to be of the same family as the address, IPv4 or IPv6
+			_udpClient = new UdpClient(address.AddressFamily);
+
+			try
+			{
+				_udpClient.Connect(address, encoderPort);
+			}
+			catch
+			{
+				// Nobody else can dispose the socket when the constructor fails
+				_udpClient.Dispose();
+				throw;
+			}
 		}
 
 		public void SendData(byte[] data)
 		{
+			if (data == null)
+				throw new ArgumentNullException(nameof(data));
+
 			_udpClient.Send(data, data.Length);
+		}
+
+		public void Dispose()
+		{
+			_udpClient.Dispose();
 		}
 	}
 }

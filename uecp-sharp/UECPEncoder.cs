@@ -31,22 +31,31 @@ namespace UECP
 {
 	public class UECPEncoder
 	{
+		public byte SequenceCounter = 1; // Sequence number of the next frame, 0 to send frames without one
 		protected Encoding _textEncoding;
 		protected Endpoint _endpoint;
+		private readonly object _sendLock = new object();
 
 		public UECPEncoder(Endpoint ep)
 		{
+			if (ep == null)
+				throw new ArgumentNullException(nameof(ep));
+
 			_textEncoding = new EBULatinEncoding();
 			_endpoint = ep;
 		}
 
 		public void SetPI(ushort pi)
 		{
-			BuildAndSendMessage(MEC.RDS_PI, BitConverter.GetBytes(pi));
+			BuildAndSendMessage(MEC.RDS_PI, GetBytes(pi));
 		}
 
 		public void SetPS(string ps)
 		{
+			if (ps == null)
+				throw new ArgumentNullException(nameof(ps));
+
+			ps = Normalize(ps);
 			if (ps.Length > 8)
 				ps = ps.Substring(0, 8);
 
@@ -59,6 +68,10 @@ namespace UECP
 
 		public void SetRadioText(string radioText)
 		{
+			if (radioText == null)
+				throw new ArgumentNullException(nameof(radioText));
+
+			radioText = Normalize(radioText);
 			if(radioText.Length > 64)
 				radioText = radioText.Substring(0, 64);
 
@@ -91,12 +104,19 @@ namespace UECP
 
 		public void SetPTY(PTY pty)
 		{
+			if (pty < PTY.None || pty > PTY.Alarm)
+				throw new ArgumentOutOfRangeException(nameof(pty));
+
 			var med = new byte[] { (byte)pty };
 			BuildAndSendMessage(MEC.RDS_PTY, med);
 		}
 
 		public void SetPTYN(string ptyn)
 		{
+			if (ptyn == null)
+				throw new ArgumentNullException(nameof(ptyn));
+
+			ptyn = Normalize(ptyn);
 			if (ptyn.Length > 8)
 				ptyn = ptyn.Substring(0, 8);
 
@@ -118,11 +138,11 @@ namespace UECP
 			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce
 		) {
 			var med = new List<byte>();
-			med.AddRange(BitConverter.GetBytes(aid));
+			med.AddRange(GetBytes(aid));
 			med.Add(
 				getODAConfiguration(ODAConfigKind.ShortMessage, odaBufConfig)
 			);
-			med.AddRange(BitConverter.GetBytes(message));
+			med.AddRange(GetBytes(message));
 
 			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
 		}
@@ -138,16 +158,16 @@ namespace UECP
 			block2 &= 0x1F;
 
 			var med = new List<byte>();
-			med.AddRange(BitConverter.GetBytes(aid));
+			med.AddRange(GetBytes(aid));
 			med.Add(
 				getODAConfiguration(ODAConfigKind.Data, odaBufConfig, odaTransmitMode, priority)
 			);
 			med.Add(block2);
 			if (!isGroupB)
 			{
-				med.AddRange(BitConverter.GetBytes(block3));
+				med.AddRange(GetBytes(block3));
 			}
-			med.AddRange(BitConverter.GetBytes(block4));
+			med.AddRange(GetBytes(block4));
 
 			BuildAndSendMessage(MEC.ODA_DATA, med.ToArray());
 		}
@@ -167,14 +187,18 @@ namespace UECP
 				getODAConfiguration(ODAConfigKind.Data, odaBufConfig, odaTransmitMode, priority)
 			);
 			med.Add(block2);
-			med.AddRange(BitConverter.GetBytes(block3));
-			med.AddRange(BitConverter.GetBytes(block4));
+			med.AddRange(GetBytes(block3));
+			med.AddRange(GetBytes(block4));
 
 			BuildAndSendMessage(MEC.ODA_FREE_FORMAT, med.ToArray());
 		}
 
 		public void SetDABDynamicLabelMessage(string dynamicLabel)
 		{
+			if (dynamicLabel == null)
+				throw new ArgumentNullException(nameof(dynamicLabel));
+
+			dynamicLabel = Normalize(dynamicLabel);
 			if (dynamicLabel.Length > 128)
 				dynamicLabel = dynamicLabel.Substring(0, 128);
 
@@ -187,13 +211,16 @@ namespace UECP
 
 		public void SendDABDynamicLabelCommand(byte command, byte[] commandBytes, bool temporary = false)
 		{
+			if (commandBytes == null)
+				throw new ArgumentNullException(nameof(commandBytes));
+
 			byte config = 0x00;
 			config |= (byte)((temporary ? 0b1 : 0b0) << 7);
 			config |= (byte)(command & 0xF);
 
 			int dataSize = Math.Min(128, commandBytes.Length);
 			byte[] data = new byte[dataSize];
-			Array.Copy(commandBytes, dataSize, data, 0, dataSize);
+			Array.Copy(commandBytes, 0, data, 0, dataSize);
 
 			var med = new List<byte>();
 			med.Add(config);
@@ -268,10 +295,39 @@ namespace UECP
 
 		private void BuildAndSendMessage(MessageElement messageElement)
 		{
-			UECPFrame uecpFrame = new UECPFrame();
-			uecpFrame.MessageElements.Add(messageElement);
+			// One frame at a time, so that frames are sent whole and in the order they are numbered
+			lock (_sendLock)
+			{
+				UECPFrame uecpFrame = new UECPFrame();
+				uecpFrame.SequenceCounter = SequenceCounter;
+				uecpFrame.MessageElements.Add(messageElement);
 
-			_endpoint.SendData(uecpFrame.GetBytes());
+				// Sequence numbers go from 01 to FF, 00 means that the counter is not used
+				if (SequenceCounter != 0x00)
+					SequenceCounter = (byte)(SequenceCounter == 0xFF ? 0x01 : SequenceCounter + 1);
+
+				_endpoint.SendData(uecpFrame.GetBytes());
+			}
+		}
+
+		private string Normalize(string text)
+		{
+			try
+			{
+				// An accented letter has to be a single character to be found in the character table
+				return text.Normalize(NormalizationForm.FormC);
+			}
+			catch (ArgumentException)
+			{
+				// Not valid Unicode, half of a surrogate pair for instance: sent as it is
+				return text;
+			}
+		}
+
+		private byte[] GetBytes(ushort value)
+		{
+			// 16 bits values are sent most significant byte first
+			return new byte[] { (byte)(value >> 8), (byte)(value & 0xFF) };
 		}
 
 		private void FillBytes(List<byte> data, byte fillWith, int desiredLength)

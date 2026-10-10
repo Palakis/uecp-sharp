@@ -63,7 +63,7 @@ namespace UECP
 
 		RDS_ON_OFF = 0x1E,
 		RDS_PHASE = 0x22,
-		RDS_LEVEL = 0x00,
+		RDS_LEVEL = 0x0E,
 
 		DAB_DL_MESSAGE = 0xAA,
 		DAB_DL_COMMAND = 0x48,
