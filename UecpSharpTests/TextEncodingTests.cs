@@ -41,11 +41,11 @@ namespace UecpSharpTests
 			Encoding e1 = new EBULatinEncoding();
 			byte[] actualBytes = e1.GetBytes(sourceText);
 
-			Assert.AreEqual(actualBytes.Length, expectedBytes.Length);
-			Assert.AreNotSame(actualBytes, expectedBytes);
+			Assert.AreEqual(expectedBytes.Length, actualBytes.Length);
+			Assert.AreNotSame(expectedBytes, actualBytes);
 			for (int i = 0; i < actualBytes.Length; i++)
 			{
-				Assert.AreEqual(actualBytes[i], expectedBytes[i]);
+				Assert.AreEqual(expectedBytes[i], actualBytes[i]);
 			}
 		}
 	}
