@@ -98,6 +98,63 @@ namespace UecpSharpTests
 		}
 
 		[TestMethod]
+		public void SetRadioTextCarriageReturnTest()
+		{
+			// EN 50067, 3.1.5.3: a text shorter than 64 characters should be ended by 0D
+			_encoder.SetRadioText("RDS\r");
+
+			Hex.AssertEqual("0A 00 00 05 00 52 44 53 0D", sentMessage());
+		}
+
+		[TestMethod]
+		public void SetRadioTextLineFeedTest()
+		{
+			// EN 50067, 3.1.5.3: 0A may be inserted to indicate a preferred line break
+			_encoder.SetRadioText("Line 1\nLine 2");
+
+			Hex.AssertEqual("0A 00 00 0E 00 4C 69 6E 65 20 31 0A 4C 69 6E 65 20 32", sentMessage());
+		}
+
+		[TestMethod]
+		public void SetRadioTextCarriageReturnAfterMaxLengthTest()
+		{
+			// A text of 64 characters needs no end mark, and has no room for it
+			_encoder.SetRadioText(new string('A', 64) + "\r");
+
+			byte[] expected = Hex.Parse("0A 00 00 41 00").Concat(Enumerable.Repeat((byte)0x41, 64)).ToArray();
+			CollectionAssert.AreEqual(expected, sentMessage());
+		}
+
+		[TestMethod]
+		[DataRow(0x09)]
+		[DataRow(0x0B)]
+		[DataRow(0x1F)]
+		public void SetRadioTextOtherControlCodesTest(int code)
+		{
+			// Carriage return and line feed are the only control codes let through
+			_encoder.SetRadioText("A" + (char)code + "B");
+
+			Hex.AssertEqual("0A 00 00 04 00 41 20 42", sentMessage());
+		}
+
+		[TestMethod]
+		public void SetPSControlCodesTest()
+		{
+			// Unlike a Radiotext, a PS only takes displayable characters
+			_encoder.SetPS("AB\r\nCD");
+
+			Hex.AssertEqual("02 00 00 41 42 20 20 43 44 20 20", sentMessage());
+		}
+
+		[TestMethod]
+		public void SetPTYNControlCodesTest()
+		{
+			_encoder.SetPTYN("AB\r\nCD");
+
+			Hex.AssertEqual("3E 00 00 41 42 20 20 43 44 20 20", sentMessage());
+		}
+
+		[TestMethod]
 		[DataRow(false, false, "00")]
 		[DataRow(true, false, "01")]
 		[DataRow(false, true, "02")]

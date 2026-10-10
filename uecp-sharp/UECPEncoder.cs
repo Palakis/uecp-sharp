@@ -78,9 +78,20 @@ namespace UECP
 			// no A/B flag, infinite transmissions, buffer flushed when a new RT message arrives
 			byte rtConfig = 0x00; 
 
+			byte[] text = _textEncoding.GetBytes(radioText);
+
+			// Unlike PS and PTYN, a Radiotext can carry these two control codes
+			for (int i = 0; i < radioText.Length; i++)
+			{
+				if (radioText[i] == '\r')
+					text[i] = 0x0D; // end of a text shorter than 64 characters
+				else if (radioText[i] == '\n')
+					text[i] = 0x0A; // preferred line break
+			}
+
 			List<byte> med = new List<byte>();
 			med.Add(rtConfig);
-			med.AddRange(_textEncoding.GetBytes(radioText));
+			med.AddRange(text);
 
 			BuildAndSendMessage(MEC.RDS_RT, med.ToArray());
 		}
