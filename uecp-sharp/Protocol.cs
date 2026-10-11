@@ -30,18 +30,13 @@ namespace UECP
 {
 	public class UECPFrame
 	{
-		public UInt16 SiteAddress;
-		public UInt16 EncoderAddress;
-		public byte SequenceCounter;
-		public List<MessageElement> MessageElements;
+		public UInt16 SiteAddress = 0x0;
+		public UInt16 EncoderAddress = 0x0;
+		public byte SequenceCounter = 0;
+		public List<MessageElement> MessageElements = new List<MessageElement>();
 
 		public UECPFrame()
 		{
-			SiteAddress = new UInt16();
-			EncoderAddress = new UInt16();
-			SequenceCounter = 0; // Sequence counter not used
-
-			MessageElements = new List<MessageElement>();
 		}
 
 		public byte[] GetBytes()

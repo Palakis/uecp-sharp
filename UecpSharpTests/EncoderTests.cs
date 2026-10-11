@@ -417,6 +417,103 @@ namespace UecpSharpTests
 		}
 
 		[TestMethod]
+		public void AddressDefaultTest()
+		{
+			// 0 as site or encoder address means all of them
+			Assert.AreEqual((ushort)0, _encoder.SiteAddress);
+			Assert.AreEqual((ushort)0, _encoder.EncoderAddress);
+		}
+
+		[TestMethod]
+		public void AddressTest()
+		{
+			_encoder.SiteAddress = 0x123;
+			_encoder.EncoderAddress = 0x05;
+
+			_encoder.SetPI(0xC201);
+
+			DecodedFrame frame = sentFrame();
+			Assert.AreEqual(0x123, frame.SiteAddress);
+			Assert.AreEqual(0x05, frame.EncoderAddress);
+
+			// Site address in the 10 most significant bits, encoder address in the 6 least significant ones,
+			// and the frame is otherwise the one sent to all encoders
+			Hex.AssertEqual("FE 48 C5 01 05 01 00 00 C2 01", _endpoint.Frames[0].Take(10).ToArray());
+		}
+
+		[TestMethod]
+		[DataRow(1, 0)]
+		[DataRow(0, 1)]
+		[DataRow(1023, 0)]
+		[DataRow(0, 63)]
+		[DataRow(1023, 63)] // the address is FF FF, which has to be stuffed
+		public void AddressRangeTest(int siteAddress, int encoderAddress)
+		{
+			_encoder.SiteAddress = (ushort)siteAddress;
+			_encoder.EncoderAddress = (ushort)encoderAddress;
+
+			_encoder.SetPS("RADIO 1");
+
+			DecodedFrame frame = sentFrame();
+			Assert.AreEqual(siteAddress, frame.SiteAddress);
+			Assert.AreEqual(encoderAddress, frame.EncoderAddress);
+			Assert.AreEqual((byte)1, frame.SequenceCounter);
+			Hex.AssertEqual("02 00 00 52 41 44 49 4F 20 31 20", frame.Message);
+		}
+
+		[TestMethod]
+		[DataRow(1024, 0)]
+		[DataRow(0xFFFF, 0)]
+		[DataRow(0, 64)]
+		[DataRow(0, 0xFFFF)]
+		public void AddressOutOfRangeTest(int siteAddress, int encoderAddress)
+		{
+			// The site address is 10 bits wide and the encoder address 6 bits wide
+			_encoder.SiteAddress = (ushort)siteAddress;
+			_encoder.EncoderAddress = (ushort)encoderAddress;
+
+			Assert.ThrowsExactly<InvalidOperationException>(() => _encoder.SetPS("RADIO 1"));
+			Assert.IsEmpty(_endpoint.Frames);
+		}
+
+		[TestMethod]
+		public void AddressChangeTest()
+		{
+			// A frame goes to the address set at the time it is sent
+			_encoder.SetPS("RADIO 1");
+
+			_encoder.SiteAddress = 0x123;
+			_encoder.EncoderAddress = 0x05;
+			_encoder.SetPS("RADIO 1");
+
+			_encoder.SiteAddress = 0;
+			_encoder.EncoderAddress = 0;
+			_encoder.SetPS("RADIO 1");
+
+			DecodedFrame[] frames = _endpoint.Frames.Select(DecodedFrame.Parse).ToArray();
+			CollectionAssert.AreEqual(new int[] { 0, 0x123, 0 }, frames.Select(f => f.SiteAddress).ToArray());
+			CollectionAssert.AreEqual(new int[] { 0, 0x05, 0 }, frames.Select(f => f.EncoderAddress).ToArray());
+
+			// Changing the address does not restart the numbering
+			CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, sentSequenceCounters());
+		}
+
+		[TestMethod]
+		public void AddressPerEncoderTest()
+		{
+			RecordingEndpoint otherEndpoint = new RecordingEndpoint();
+			UECPEncoder otherEncoder = new UECPEncoder(otherEndpoint);
+
+			_encoder.SiteAddress = 0x123;
+			_encoder.EncoderAddress = 0x05;
+			otherEncoder.SetPS("RADIO 2");
+
+			DecodedFrame frame = DecodedFrame.Parse(otherEndpoint.Frames.Single());
+			Assert.AreEqual(0, frame.SiteAddress);
+			Assert.AreEqual(0, frame.EncoderAddress);
+		}
+
+		[TestMethod]
 		public void ConcurrentCallsTest()
 		{
 			const int threads = 8;
@@ -466,13 +563,21 @@ namespace UecpSharpTests
 			CollectionAssert.AreEqual(codes, sentCodes);
 		}
 
-		// Message of the only frame sent, which has to be a valid one addressed to all encoders
-		private byte[] sentMessage()
+		// The only frame sent, which has to be a valid one
+		private DecodedFrame sentFrame()
 		{
 			Assert.HasCount(1, _endpoint.Frames);
 
 			DecodedFrame frame = DecodedFrame.Parse(_endpoint.Frames[0]);
 			Assert.IsTrue(frame.CrcIsValid);
+
+			return frame;
+		}
+
+		// Message of the only frame sent, which has to be addressed to all encoders
+		private byte[] sentMessage()
+		{
+			DecodedFrame frame = sentFrame();
 			Assert.AreEqual(0, frame.SiteAddress);
 			Assert.AreEqual(0, frame.EncoderAddress);
 

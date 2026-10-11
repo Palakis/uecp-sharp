@@ -32,6 +32,8 @@ namespace UECP
 	public class UECPEncoder
 	{
 		public byte SequenceCounter = 1; // Sequence number of the next frame, 0 to send frames without one
+		public UInt16 SiteAddress = 0x0;
+		public UInt16 EncoderAddress = 0x0;
 		protected Encoding _textEncoding;
 		protected Endpoint _endpoint;
 		private readonly object _sendLock = new object();
@@ -309,8 +311,12 @@ namespace UECP
 			// One frame at a time, so that frames are sent whole and in the order they are numbered
 			lock (_sendLock)
 			{
-				UECPFrame uecpFrame = new UECPFrame();
-				uecpFrame.SequenceCounter = SequenceCounter;
+				UECPFrame uecpFrame = new UECPFrame()
+				{
+					SiteAddress = this.SiteAddress,
+					EncoderAddress = this.EncoderAddress,
+					SequenceCounter = this.SequenceCounter
+				};
 				uecpFrame.MessageElements.Add(messageElement);
 
 				// Sequence numbers go from 01 to FF, 00 means that the counter is not used

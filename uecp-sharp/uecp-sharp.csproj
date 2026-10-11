@@ -3,7 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>UECP</RootNamespace>
     <AssemblyName>uecp-sharp</AssemblyName>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Description>UECP Client library</Description>
     <Copyright>Copyright © 2017-2026 Stéphane Lepin</Copyright>
   </PropertyGroup>
