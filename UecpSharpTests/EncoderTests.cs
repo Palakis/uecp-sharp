@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -208,6 +209,77 @@ namespace UecpSharpTests
 			_encoder.SetMusicSpeech(isMusic);
 
 			Hex.AssertEqual("05 00 00 " + expected, sentMessage());
+		}
+
+		[TestMethod]
+		public void SetRealTimeClockTest()
+		{
+			// SPB 490 6.02, 3.1.38: 12 September 2002, 10:18:33.15 UTC, local time offset of 1 hour
+			_encoder.SetRealTimeClock(new DateTimeOffset(2002, 9, 12, 11, 18, 33, 150, TimeSpan.FromHours(1)));
+
+			Hex.AssertEqual("0D 02 09 0C 0A 12 21 0F 02", sentMessage());
+		}
+
+		[TestMethod]
+		[DataRow("1992-09-12T11:18:33.150+01:00", "5C 09 0C 0A 12 21 0F 02")] // SPB 490 3.3.37
+		[DataRow("2000-01-01T00:00:00.000+00:00", "00 01 01 00 00 00 00 00")]
+		[DataRow("2099-12-31T23:59:59.999+00:00", "63 0C 1F 17 3B 3B 63 00")]
+		[DataRow("2026-10-12T12:00:00.009+00:00", "1A 0A 0C 0C 00 00 00 00")] // less than a centisecond
+		[DataRow("2026-10-12T05:30:00.000+05:30", "1A 0A 0C 00 00 00 00 0B")]
+		[DataRow("2026-10-12T12:00:00.000-03:30", "1A 0A 0C 0F 1E 00 00 27")] // bit 5 is the sign of the offset
+		[DataRow("2026-10-12T00:30:00.000+02:00", "1A 0A 0B 16 1E 00 00 04")] // still the day before in UTC
+		[DataRow("2026-12-31T20:00:00.000-05:00", "1B 01 01 01 00 00 00 2A")] // already the next year in UTC
+		[DataRow("2026-10-12T12:00:00.000+14:00", "1A 0A 0B 16 00 00 00 1C")]
+		[DataRow("2026-10-12T12:00:00.000-12:00", "1A 0A 0D 00 00 00 00 38")]
+		public void SetRealTimeClockUtcAndOffsetTest(string dateTime, string expected)
+		{
+			// Date and time are sent as UTC, followed by the local time offset in half hours
+			_encoder.SetRealTimeClock(DateTimeOffset.Parse(dateTime, CultureInfo.InvariantCulture));
+
+			Hex.AssertEqual("0D " + expected, sentMessage());
+		}
+
+		[TestMethod]
+		public void SetRealTimeClockFromUtcDateTimeTest()
+		{
+			// A DateTime is taken as well: UTC has no local time offset
+			_encoder.SetRealTimeClock(new DateTime(2002, 9, 12, 10, 18, 33, 150, DateTimeKind.Utc));
+
+			Hex.AssertEqual("0D 02 09 0C 0A 12 21 0F 00", sentMessage());
+		}
+
+		[TestMethod]
+		[DataRow(15)]
+		[DataRow(345)] // UTC+5:45
+		[DataRow(-1)]
+		public void SetRealTimeClockOffsetNotHalfHoursTest(int offsetMinutes)
+		{
+			// The local time offset can only be a number of half hours
+			DateTimeOffset dateTime = new DateTimeOffset(2026, 10, 12, 12, 0, 0, TimeSpan.FromMinutes(offsetMinutes));
+
+			Assert.ThrowsExactly<ArgumentException>(() => _encoder.SetRealTimeClock(dateTime));
+			Assert.IsEmpty(_endpoint.Frames);
+		}
+
+		[TestMethod]
+		[DataRow(-58, "FF C6")] // SPB 490 6.02, 3.1.39
+		[DataRow(0, "00 00")]
+		[DataRow(1, "00 01")]
+		[DataRow(58, "00 3A")]
+		[DataRow(255, "00 FF")]
+		[DataRow(256, "01 00")]
+		[DataRow(32767, "7F FF")] // largest correction
+		[DataRow(-1, "FF FF")]
+		[DataRow(-2, "FF FE")]
+		[DataRow(-3, "FF FD")]
+		[DataRow(-256, "FF 00")]
+		[DataRow(-32768, "80 00")] // smallest correction
+		public void SetRealTimeClockCorrectionTest(int milliseconds, string expected)
+		{
+			// 16 bits two's complement number, most significant byte first
+			_encoder.SetRealTimeClockCorrection((short)milliseconds);
+
+			Hex.AssertEqual("09 " + expected, sentMessage());
 		}
 
 		[TestMethod]

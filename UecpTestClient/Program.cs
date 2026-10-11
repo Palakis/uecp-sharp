@@ -45,6 +45,19 @@ namespace UecpTestClient
 					Connect(host, port).SetRadioText(value);
 					break;
 
+				case "time":
+					DateTimeOffset dateTime;
+					if (value.ToLowerInvariant() == "now")
+						dateTime = DateTimeOffset.Now;
+					else if (!DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dateTime))
+						return Error("Date and time must be \"now\" or in ISO 8601 format, such as 2026-10-12T14:30:00+02:00.");
+
+					if (dateTime.Offset.TotalMinutes % 30 != 0)
+						return Error("The offset from UTC must be a multiple of 30 minutes.");
+
+					Connect(host, port).SetRealTimeClock(dateTime);
+					break;
+
 				default:
 					return Usage();
 			}
@@ -71,6 +84,8 @@ namespace UecpTestClient
 			Console.Error.WriteLine("  pi <hex>    Set the PI code (exactly four hexadecimal characters)");
 			Console.Error.WriteLine("  ps <text>   Set the PS name (at most 8 characters)");
 			Console.Error.WriteLine("  rt <text>   Set the RadioText (at most 64 characters)");
+			Console.Error.WriteLine("  time <date> Set the date and time (\"now\", or ISO 8601 such as 2026-10-12T14:30:00+02:00,");
+			Console.Error.WriteLine("              in the local time zone if it has no offset from UTC)");
 			return 1;
 		}
 	}

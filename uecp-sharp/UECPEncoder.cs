@@ -146,6 +146,39 @@ namespace UECP
 			BuildAndSendMessage(MEC.RDS_MS, med);
 		}
 
+		public void SetRealTimeClock(DateTimeOffset dateTime)
+		{
+			// The local time offset is a number of half hours
+			int offsetMinutes = (int)dateTime.Offset.TotalMinutes;
+			if (offsetMinutes % 30 != 0)
+				throw new ArgumentException("The offset from UTC must be a multiple of 30 minutes", nameof(dateTime));
+
+			byte localTimeOffset = (byte)(Math.Abs(offsetMinutes) / 30);
+			if (offsetMinutes < 0)
+				localTimeOffset |= 0x20; // bit 5 is the sign
+
+			// The date and time themselves are sent as UTC
+			DateTime utc = dateTime.UtcDateTime;
+
+			var med = new byte[] {
+				(byte)(utc.Year % 100),
+				(byte)utc.Month,
+				(byte)utc.Day,
+				(byte)utc.Hour,
+				(byte)utc.Minute,
+				(byte)utc.Second,
+				(byte)(utc.Millisecond / 10), // centiseconds
+				localTimeOffset
+			};
+			BuildAndSendMessage(MEC.RTC, med);
+		}
+
+		public void SetRealTimeClockCorrection(short milliseconds)
+		{
+			// Sent as a 16 bits two's complement number
+			BuildAndSendMessage(MEC.RTC_CORRECTION, GetBytes(unchecked((ushort)milliseconds)));
+		}
+
 		public void SendODAShortMessage(
 			ushort aid, ushort message,
 			ODABufferConfig odaBufConfig = ODABufferConfig.TransmitOnce
